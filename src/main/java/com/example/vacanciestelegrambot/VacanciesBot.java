@@ -1,7 +1,12 @@
 package com.example.vacanciestelegrambot;
 
+import com.example.vacanciestelegrambot.dto.VacancyDto;
+import com.example.vacanciestelegrambot.service.VacancyService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
@@ -20,11 +25,18 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
         @PropertySource("classpath:application.properties")
 })
 public class VacanciesBot extends TelegramLongPollingBot {
+    private static final String LINE_SEPARATOR = System.lineSeparator();
     private static final int VACANCY_ID_INDEX = 1;
     private static final String EQUAL_SIGN = "=";
+    private final VacancyService vacancyService;
 
-    public VacanciesBot(@Value("${telegram.token}") String botToken) {
+    private final Map<Long, String> lastShownVacancyLevel = new HashMap<>();
+
+    @Autowired
+    public VacanciesBot(@Value("${telegram.token}") String botToken,
+                        VacancyService vacancyService) {
         super(botToken);
+        this.vacancyService = vacancyService;
     }
 
     @Override
@@ -42,41 +54,92 @@ public class VacanciesBot extends TelegramLongPollingBot {
             } else if ("showSeniorVacancies".equals(callbackData)) {
                 showSeniorVacancies(update);
             } else if (callbackData.startsWith("vacancyId=")) {
-                Long vacancyId = Long.parseLong(callbackData.split(EQUAL_SIGN)[VACANCY_ID_INDEX]);
+                String vacancyId = callbackData.split(EQUAL_SIGN)[VACANCY_ID_INDEX];
                 showVacancyDescription(vacancyId, update);
+            } else if ("backToVacancies".equals(callbackData)) {
+                handleBackToVacanciesCommand(update);
+            } else if ("backToStartMenu".equals(callbackData)) {
+                handleBackToStartCommand(update);
             }
         }
     }
 
-    private void showVacancyDescription(Long vacancyId, Update update) {
+    private void handleBackToStartCommand(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
-        sendMessage.setText("Vacancy description with id = " + vacancyId);
+        sendMessage.setText("Choose title:");
+        sendMessage.setReplyMarkup(getStartMenu());
         executeSendMessage(sendMessage);
+    }
+
+    private void handleBackToVacanciesCommand(Update update) {
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        String level = lastShownVacancyLevel.get(chatId);
+
+        if ("junior".equals(level)) {
+            showJuniorVacancies(update);
+        } else if ("middle".equals(level)) {
+            showMiddleVacancies(update);
+        } else if ("senior".equals(level)) {
+            showSeniorVacancies(update);
+        }
+    }
+
+    private void showVacancyDescription(String vacancyId, Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
+        String fullVacancyDescription = createFullVacancyDescription(vacancyId);
+        sendMessage.setText(fullVacancyDescription);
+        sendMessage.setReplyMarkup(getBackToVacanciesMenu());
+        executeSendMessage(sendMessage);
+    }
+
+    private ReplyKeyboard getBackToVacanciesMenu() {
+        List<InlineKeyboardButton> buttons = new ArrayList<>();
+        InlineKeyboardButton backToVacanciesButton = new InlineKeyboardButton();
+        backToVacanciesButton.setText("Back to vacancies");
+        backToVacanciesButton.setCallbackData("backToVacancies");
+        buttons.add(backToVacanciesButton);
+
+        InlineKeyboardButton backToStartMenu = new InlineKeyboardButton();
+        backToStartMenu.setText("Back to start menu");
+        backToStartMenu.setCallbackData("backToStartMenu");
+        buttons.add(backToStartMenu);
+
+        return createKeyboard(buttons);
     }
 
     private void showJuniorVacancies(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Please, choose Junior vacancy");
-        sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        sendMessage.setChatId(chatId);
         sendMessage.setReplyMarkup(getJuniorVacanciesMenu());
         executeSendMessage(sendMessage);
+
+        lastShownVacancyLevel.put(chatId, "junior");
     }
 
     private void showMiddleVacancies(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Please, choose Middle vacancy");
-        sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        sendMessage.setChatId(chatId);
         sendMessage.setReplyMarkup(getMiddleVacanciesMenu());
         executeSendMessage(sendMessage);
+
+        lastShownVacancyLevel.put(chatId, "middle");
     }
 
     private void showSeniorVacancies(Update update) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setText("Please, choose Senior vacancy");
-        sendMessage.setChatId(update.getCallbackQuery().getMessage().getChatId());
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        sendMessage.setChatId(chatId);
         sendMessage.setReplyMarkup(getSeniorVacanciesMenu());
         executeSendMessage(sendMessage);
+
+        lastShownVacancyLevel.put(chatId, "senior");
     }
 
     private ReplyKeyboard getJuniorVacanciesMenu() {
@@ -108,6 +171,19 @@ public class VacanciesBot extends TelegramLongPollingBot {
         return "vacancies bot";
     }
 
+    private List<InlineKeyboardButton> getVacanciesButtons(List<VacancyDto> vacancies) {
+        List<InlineKeyboardButton> vacanciesButtons = new ArrayList<>();
+
+        for (VacancyDto vacancyDto : vacancies) {
+            InlineKeyboardButton vacancyButton = new InlineKeyboardButton();
+            vacancyButton.setText(vacancyDto.getTitle());
+            vacancyButton.setCallbackData("vacancyId=" + vacancyDto.getId());
+            vacanciesButtons.add(vacancyButton);
+        }
+
+        return vacanciesButtons;
+    }
+
     private List<InlineKeyboardButton> getTitleButtons() {
         List<InlineKeyboardButton> buttons = new ArrayList<>();
 
@@ -130,51 +206,21 @@ public class VacanciesBot extends TelegramLongPollingBot {
     }
 
     private List<InlineKeyboardButton> getJuniorButtons() {
-        List<InlineKeyboardButton> juniorButtons = new ArrayList<>();
+        List<VacancyDto> juniorVacancies = vacancyService.getJuniorVacancies();
 
-        InlineKeyboardButton amazonVacancy = new InlineKeyboardButton();
-        amazonVacancy.setText("Junior Java Developer at Amazon");
-        amazonVacancy.setCallbackData("vacancyId=1");
-        juniorButtons.add(amazonVacancy);
-
-        InlineKeyboardButton googleVacancy = new InlineKeyboardButton();
-        googleVacancy.setText("Junior Java Developer at Google");
-        googleVacancy.setCallbackData("vacancyId=2");
-        juniorButtons.add(googleVacancy);
-
-        InlineKeyboardButton metaVacancy = new InlineKeyboardButton();
-        metaVacancy.setText("Junior Java Developer at Meta");
-        metaVacancy.setCallbackData("vacancyId=3");
-        juniorButtons.add(metaVacancy);
-
-        return juniorButtons;
+        return getVacanciesButtons(juniorVacancies);
     }
 
     private List<InlineKeyboardButton> getMiddleButtons() {
-        List<InlineKeyboardButton> middleButtons = new ArrayList<>();
+        List<VacancyDto> middleVacancies = vacancyService.getMiddleVacancies();
 
-        InlineKeyboardButton epamVacancy = new InlineKeyboardButton();
-        epamVacancy.setText("Middle Java Software Engineer at Epam");
-        epamVacancy.setCallbackData("vacancyId=4");
-        middleButtons.add(epamVacancy);
-
-        InlineKeyboardButton dataArtVacancy = new InlineKeyboardButton();
-        dataArtVacancy.setText("Middle Java Developer at DataArt");
-        dataArtVacancy.setCallbackData("vacancyId=5");
-        middleButtons.add(dataArtVacancy);
-
-        return middleButtons;
+        return getVacanciesButtons(middleVacancies);
     }
 
     private List<InlineKeyboardButton> getSeniorButtons() {
-        List<InlineKeyboardButton> seniorButtons = new ArrayList<>();
+        List<VacancyDto> seniorVacancies = vacancyService.getSeniorVacancies();
 
-        InlineKeyboardButton globalLogicVacancy = new InlineKeyboardButton();
-        globalLogicVacancy.setText("Senior Java Developer at GlobalLogic");
-        globalLogicVacancy.setCallbackData("vacancyId=6");
-        seniorButtons.add(globalLogicVacancy);
-
-        return seniorButtons;
+        return getVacanciesButtons(seniorVacancies);
     }
 
     private ReplyKeyboard createKeyboard(List<InlineKeyboardButton> buttons) {
@@ -189,5 +235,20 @@ public class VacanciesBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             throw new RuntimeException("Execution failed!!!");
         }
+    }
+
+    private String createFullVacancyDescription(String vacancyId) {
+        String company = vacancyService.getVacancyById(vacancyId).getCompany();
+        String shortDescription = vacancyService.getVacancyById(vacancyId).getShortDescription();
+        String longDescription = vacancyService.getVacancyById(vacancyId).getLongDescription();
+        String salary = vacancyService.getVacancyById(vacancyId).getSalary();
+        String link = vacancyService.getVacancyById(vacancyId).getLink();
+        return new StringBuilder()
+                .append(company).append(LINE_SEPARATOR)
+                .append(shortDescription).append(LINE_SEPARATOR)
+                .append(longDescription).append(LINE_SEPARATOR)
+                .append(salary).append(LINE_SEPARATOR)
+                .append(link).append(LINE_SEPARATOR)
+                .toString();
     }
 }
