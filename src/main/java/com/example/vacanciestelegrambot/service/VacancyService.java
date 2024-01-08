@@ -5,6 +5,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,17 @@ public class VacancyService {
     public List<VacancyDto> getSeniorVacancies() {
         return vacancies.values().stream()
                 .filter(vacancyDto -> vacancyDto.getTitle().toLowerCase().contains("senior"))
+                .toList();
+    }
+
+    public List<VacancyDto> getOtherVacancies() {
+        Predicate<VacancyDto> otherVacanciesPredicate =
+                vacancyDto -> !(vacancyDto.getTitle().toLowerCase().contains("junior")
+                || vacancyDto.getTitle().toLowerCase().contains("middle")
+                || vacancyDto.getTitle().toLowerCase().contains("senior"));
+
+        return vacancies.values().stream()
+                .filter(otherVacanciesPredicate)
                 .toList();
     }
 

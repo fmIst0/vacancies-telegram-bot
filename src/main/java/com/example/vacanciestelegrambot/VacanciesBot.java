@@ -53,6 +53,8 @@ public class VacanciesBot extends TelegramLongPollingBot {
                 showMiddleVacancies(update);
             } else if ("showSeniorVacancies".equals(callbackData)) {
                 showSeniorVacancies(update);
+            } else if ("showOtherVacancies".equals(callbackData)) {
+                showOtherVacancies(update);
             } else if (callbackData.startsWith("vacancyId=")) {
                 String vacancyId = callbackData.split(EQUAL_SIGN)[VACANCY_ID_INDEX];
                 showVacancyDescription(vacancyId, update);
@@ -82,6 +84,8 @@ public class VacanciesBot extends TelegramLongPollingBot {
             showMiddleVacancies(update);
         } else if ("senior".equals(level)) {
             showSeniorVacancies(update);
+        } else if ("other".equals(level)) {
+            showOtherVacancies(update);
         }
     }
 
@@ -107,6 +111,17 @@ public class VacanciesBot extends TelegramLongPollingBot {
         buttons.add(backToStartMenu);
 
         return createKeyboard(buttons);
+    }
+
+    private void showOtherVacancies(Update update) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setText("Please, choose vacancy");
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        sendMessage.setChatId(chatId);
+        sendMessage.setReplyMarkup(getOtherVacanciesMenu());
+        executeSendMessage(sendMessage);
+
+        lastShownVacancyLevel.put(chatId, "other");
     }
 
     private void showJuniorVacancies(Update update) {
@@ -152,6 +167,10 @@ public class VacanciesBot extends TelegramLongPollingBot {
 
     private ReplyKeyboard getSeniorVacanciesMenu() {
         return createKeyboard(getSeniorButtons());
+    }
+
+    private ReplyKeyboard getOtherVacanciesMenu() {
+        return createKeyboard(getOtherVacanciesButtons());
     }
 
     private void handleStartCommand(Update update) {
@@ -202,7 +221,18 @@ public class VacanciesBot extends TelegramLongPollingBot {
         senior.setCallbackData("showSeniorVacancies");
         buttons.add(senior);
 
+        InlineKeyboardButton other = new InlineKeyboardButton();
+        other.setText("Others");
+        other.setCallbackData("showOtherVacancies");
+        buttons.add(other);
+
         return buttons;
+    }
+
+    private List<InlineKeyboardButton> getOtherVacanciesButtons() {
+        List<VacancyDto> otherVacancies = vacancyService.getOtherVacancies();
+
+        return getVacanciesButtons(otherVacancies);
     }
 
     private List<InlineKeyboardButton> getJuniorButtons() {
