@@ -26,8 +26,11 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 })
 public class VacanciesBot extends TelegramLongPollingBot {
     private static final String LINE_SEPARATOR = System.lineSeparator();
-    private static final int VACANCY_ID_INDEX = 1;
+    private static final String MESSAGE_IF_DESCRIPTION_IS_TOO_LONG =
+            "The job description is too long, follow the link to see all the information.";
+    private static final String ELEMENTS_SEPARATOR = "-----------------------------";
     private static final String EQUAL_SIGN = "=";
+    private static final int VACANCY_ID_INDEX = 1;
     private final VacancyService vacancyService;
 
     private final Map<Long, String> lastShownVacancyLevel = new HashMap<>();
@@ -268,17 +271,36 @@ public class VacanciesBot extends TelegramLongPollingBot {
     }
 
     private String createFullVacancyDescription(String vacancyId) {
-        String company = vacancyService.getVacancyById(vacancyId).getCompany();
-        String shortDescription = vacancyService.getVacancyById(vacancyId).getShortDescription();
-        String longDescription = vacancyService.getVacancyById(vacancyId).getLongDescription();
-        String salary = vacancyService.getVacancyById(vacancyId).getSalary();
-        String link = vacancyService.getVacancyById(vacancyId).getLink();
-        return new StringBuilder()
-                .append(company).append(LINE_SEPARATOR)
+        StringBuilder fullVacancyDescriptionBuilder = new StringBuilder();
+        VacancyDto vacancy = vacancyService.getVacancyById(vacancyId);
+        String title = vacancy.getTitle();
+        String company = vacancy.getCompany();
+        String shortDescription = vacancy.getShortDescription();
+        String longDescription = vacancy.getLongDescription();
+        String salary = vacancy.getSalary();
+        String link = vacancy.getLink();
+        String fullVacancyDescription = fullVacancyDescriptionBuilder
+                .append(title).append(LINE_SEPARATOR)
                 .append(shortDescription).append(LINE_SEPARATOR)
+                .append(ELEMENTS_SEPARATOR).append(LINE_SEPARATOR)
                 .append(longDescription).append(LINE_SEPARATOR)
+                .append(ELEMENTS_SEPARATOR).append(LINE_SEPARATOR)
+                .append(company).append(LINE_SEPARATOR)
                 .append(salary).append(LINE_SEPARATOR)
                 .append(link).append(LINE_SEPARATOR)
                 .toString();
+        if (fullVacancyDescription.length() > 4096) {
+            return new StringBuilder()
+                    .append(title).append(LINE_SEPARATOR)
+                    .append(shortDescription).append(LINE_SEPARATOR)
+                    .append(ELEMENTS_SEPARATOR).append(LINE_SEPARATOR)
+                    .append(MESSAGE_IF_DESCRIPTION_IS_TOO_LONG).append(LINE_SEPARATOR)
+                    .append(ELEMENTS_SEPARATOR).append(LINE_SEPARATOR)
+                    .append(company).append(LINE_SEPARATOR)
+                    .append(salary).append(LINE_SEPARATOR)
+                    .append(link).append(LINE_SEPARATOR)
+                    .toString();
+        }
+        return fullVacancyDescription;
     }
 }
