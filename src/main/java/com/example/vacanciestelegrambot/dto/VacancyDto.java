@@ -2,8 +2,10 @@ package com.example.vacanciestelegrambot.dto;
 
 import com.opencsv.bean.CsvBindByName;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 @Data
+@Accessors(chain = true)
 public class VacancyDto {
     @CsvBindByName(column = "Id")
     private String id;
