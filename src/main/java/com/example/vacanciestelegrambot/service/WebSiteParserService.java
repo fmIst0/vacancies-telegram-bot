@@ -34,14 +34,14 @@ public class WebSiteParserService {
                 String shortDescription = vacanciesElement
                         .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.sh-info")
                         .text();
+                String company = vacanciesElement
+                        .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.title > strong > a")
+                        .text();
                 Document vacancyDocument = connect(vacancyLink).get();
                 Elements vacancyElements = vacancyDocument.select("#container > div.content-wrap");
                 for (Element vacancyElement : vacancyElements) {
                     String longDescription = vacancyElement
                             .select("#container > div.content-wrap > div > div.row.m-db > div.cell.m-db > div > div.l-vacancy")
-                            .text();
-                    String company = vacancyElement
-                            .select("#container > div.content-wrap > div > div.row.m-db > div.cell.m-db > div > div.b-compinfo > div > div.l-n > a:nth-child(" + childNumber + ")")
                             .text();
                     String salary = vacancyElement
                             .select("#container > div.content-wrap > div > div.row.m-db > div.cell.m-db > div > div.l-vacancy > div.sh-info > span.salary")
