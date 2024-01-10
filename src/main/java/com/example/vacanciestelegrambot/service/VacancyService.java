@@ -11,18 +11,26 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class VacancyService {
+    private final WebSiteParserService webSiteParserService;
+    private final VacanciesWriterService vacanciesWriterService;
     private final VacanciesReaderService vacanciesReaderService;
     private final Map<String, VacancyDto> vacancies = new HashMap<>();
 
     @Autowired
-    public VacancyService(VacanciesReaderService vacanciesReaderService) {
+    public VacancyService(WebSiteParserService webSiteParserService,
+                          VacanciesWriterService vacanciesWriterService,
+                          VacanciesReaderService vacanciesReaderService) {
+        this.webSiteParserService = webSiteParserService;
+        this.vacanciesWriterService = vacanciesWriterService;
         this.vacanciesReaderService = vacanciesReaderService;
     }
 
     @PostConstruct
     public void init() {
-        List<VacancyDto> vacanciesDtos = vacanciesReaderService.getVacanciesFromFile("vacancies.csv");
-        for (VacancyDto vacancy : vacanciesDtos) {
+        List<VacancyDto> vacanciesFromSite = webSiteParserService.getVacanciesFromSite();
+        vacanciesWriterService.writeVacanciesToFile(vacanciesFromSite, "src/main/resources/vacancies.csv");
+        List<VacancyDto> vacanciesFromFile = vacanciesReaderService.getVacanciesFromFile("vacancies.csv");
+        for (VacancyDto vacancy : vacanciesFromFile) {
             vacancies.put(vacancy.getId(), vacancy);
         }
     }
