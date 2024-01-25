@@ -1,4 +1,4 @@
-package com.example.vacanciestelegrambot;
+package com.example.vacanciestelegrambot.bot;
 
 import com.example.vacanciestelegrambot.dto.VacancyDto;
 import com.example.vacanciestelegrambot.service.VacancyService;
@@ -20,10 +20,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
-@PropertySources({
-        @PropertySource("classpath:tgconfig.properties"),
-        @PropertySource("classpath:application.properties")
-})
 public class VacanciesBot extends TelegramLongPollingBot {
     private static final String LINE_SEPARATOR = System.lineSeparator();
     private static final String MESSAGE_IF_DESCRIPTION_IS_TOO_LONG =
