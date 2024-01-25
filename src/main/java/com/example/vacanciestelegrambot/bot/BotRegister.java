@@ -1,4 +1,4 @@
-package com.example.vacanciestelegrambot;
+package com.example.vacanciestelegrambot.bot;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
