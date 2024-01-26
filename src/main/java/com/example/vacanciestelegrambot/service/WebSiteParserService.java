@@ -13,6 +13,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WebSiteParserService {
+    private static final String MAIN_RESOURCE_LINK = "https://jobs.dou.ua/vacancies/?category=Java";
+    private static final String SALARY_CSS_SELECTOR
+            = "#container > div.content-wrap > div > div.row.m-db > "
+            + "div.cell.m-db > div > div.l-vacancy > div.sh-info > span.salary";
+    private static final String LONG_DESCRIPTION_CSS_SELECTOR
+            = "#container > div.content-wrap > div > "
+            + "div.row.m-db > div.cell.m-db > div > div.l-vacancy";
+    private static final String REPEATED_SELECTOR_PART = "#vacancyListId > ul > li:nth-child(";
+    private static final String VACANCIES_LIST_CSS_SELECTOR = "li.l-vacancy";
 
     public List<VacancyDto> getVacanciesFromSite() {
         try {
@@ -22,29 +31,29 @@ public class WebSiteParserService {
 
             int childNumber = 1;
 
-            Document document = connect("https://jobs.dou.ua/vacancies/?category=Java").get();
-            Elements vacanciesElements = document.select("li.l-vacancy");
+            Document document = connect(MAIN_RESOURCE_LINK).get();
+            Elements vacanciesElements = document.select(VACANCIES_LIST_CSS_SELECTOR);
             for (Element vacanciesElement : vacanciesElements) {
                 String vacancyLink = vacanciesElement
-                        .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.title > a")
+                        .select(REPEATED_SELECTOR_PART + childNumber + ") > div.title > a")
                         .attr("href");
                 String title = vacanciesElement
-                        .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.title > a")
+                        .select(REPEATED_SELECTOR_PART + childNumber + ") > div.title > a")
                         .text();
                 String shortDescription = vacanciesElement
-                        .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.sh-info")
+                        .select(REPEATED_SELECTOR_PART + childNumber + ") > div.sh-info")
                         .text();
                 String company = vacanciesElement
-                        .select("#vacancyListId > ul > li:nth-child(" + childNumber + ") > div.title > strong > a")
+                        .select(REPEATED_SELECTOR_PART + childNumber + ") > div.title > strong > a")
                         .text();
                 Document vacancyDocument = connect(vacancyLink).get();
                 Elements vacancyElements = vacancyDocument.select("#container > div.content-wrap");
                 for (Element vacancyElement : vacancyElements) {
                     String longDescription = vacancyElement
-                            .select("#container > div.content-wrap > div > div.row.m-db > div.cell.m-db > div > div.l-vacancy")
+                            .select(LONG_DESCRIPTION_CSS_SELECTOR)
                             .text();
                     String salary = vacancyElement
-                            .select("#container > div.content-wrap > div > div.row.m-db > div.cell.m-db > div > div.l-vacancy > div.sh-info > span.salary")
+                            .select(SALARY_CSS_SELECTOR)
                             .text();
 
                     VacancyDto newVacancy = new VacancyDto()
